@@ -1,0 +1,5 @@
+docker-compose down -v
+docker-compose up --build
+down -v removes the containers and volumes (including the postgres_data volume).
+
+When you restart, PostgreSQL will create the kurama user and database as defined by your environment variables.
