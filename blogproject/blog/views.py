@@ -5,7 +5,8 @@ from .serializers import UserSerializer, MyTokenObtainPairSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.permissions import AllowAny
-
+from .serializers import RegisterSerializer
+from rest_framework import generics
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 # Create your views here.
@@ -27,3 +28,10 @@ class UserViewSet(viewsets.ModelViewSet):
 class MyObtainTokenPairView(TokenObtainPairView):
     permission_classes = (AllowAny,)
     serializer_class = MyTokenObtainPairSerializer
+
+class RegisterView(generics.CreateAPIView):
+    # Defines the set of objects this view works with
+    queryset = User.objects.all()
+    # Allows anyone (even unauthenticated users) to access this endpoint
+    permission_classes = (AllowAny,)
+    serializer_class = RegisterSerializer
