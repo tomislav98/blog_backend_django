@@ -22,11 +22,35 @@ from django.conf.urls.static import static
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
+
 )
 from blog.views import MyObtainTokenPairView, RegisterView
-from blog.views import UserViewSet
+from blog.views import UserViewSet, PostViewSet
 router = DefaultRouter()
+
+
+# Create your views here.
+# | HTTP Method | URL            | Action              |
+#| ----------- | -------------- | ------------------- |
+#| GET         | `/users/`      | list all users      |
+#| POST        | `/users/`      | create a user       |
+#| GET         | `/users/<id>/` | get user by ID      |
+#| PUT         | `/users/<id>/` | update user         |
+#| PATCH       | `/users/<id>/` | partial update user |
+#| DELETE      | `/users/<id>/` | delete user         |
 router.register(r'users', UserViewSet)
+
+
+# | Method | URL               | Description             |
+# | ------ | ----------------- | ----------------------- |
+# | GET    | `/api/posts/`     | List all your posts     |
+# | POST   | `/api/posts/`     | Create a new post       |
+# | GET    | `/api/posts/:id/` | Retrieve a single post  |
+# | PUT    | `/api/posts/:id/` | Update a post (you own) |
+# | DELETE | `/api/posts/:id/` | Delete a post (you own) |
+
+router.register(r'api/posts', PostViewSet)
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),

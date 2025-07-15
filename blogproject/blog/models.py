@@ -1,22 +1,47 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
+from django.utils import timezone
+
+class CustomUserManager(BaseUserManager):
+    def create_user(self, email, user_name, password=None, **extra_fields):
+        if not email:
+            raise ValueError('The Email field must be set')
+        email = self.normalize_email(email)
+        user = self.model(email=email, user_name=user_name, **extra_fields)
+        user.set_password(password)
+        user.save()
+        return user
+
+    def create_superuser(self, email, user_name, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        return self.create_user(email, user_name, password, **extra_fields)
 
 
-class User(models.Model):
+class User(AbstractBaseUser, PermissionsMixin):
     class Role(models.TextChoices):
         ADMIN = "ADMIN", _("Admin")
         AUTHOR = "AUTHOR", _("Author")
         SUBSCRIBER = "SUBSCRIBER", _("Subscriber")
 
-    user_name = models.CharField(max_length=30)
-    email = models.EmailField(max_length=30, unique=True)
-    password = models.CharField(max_length=128)  # assuming hashed password length
+    user_name = models.CharField(max_length=30,  unique=True)
+    email = models.EmailField(unique=True)
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.SUBSCRIBER)
-    created_at = models.DateTimeField(auto_now_add=True)
+
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
+    objects = CustomUserManager()
+
+    USERNAME_FIELD = 'user_name' # required on login field
+    REQUIRED_FIELDS = ['email'] # required on registration field
+
     def __str__(self):
-        return self.user_name
+        return self.email
 
 
 class Post(models.Model):
@@ -28,6 +53,7 @@ class Post(models.Model):
     title = models.CharField(max_length=255)
     slug = models.SlugField(unique=True, blank=True, null=True)
     body = models.TextField()
+    image = models.ImageField(upload_to='post_images/', null=True, blank=True)
     status = models.CharField(max_length=9, choices=Status.choices, default=Status.DRAFT)
     view_count = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User
+from .models import User, Post
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
@@ -20,7 +20,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token = super(MyTokenObtainPairSerializer, cls).get_token(user)
 
         # Add custom claims
-        token['username'] = user.username
+        token['username'] = user.user_name
         return token
 
 """
@@ -72,10 +72,19 @@ class RegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data.pop('password2')  # remove confirmation field
 
-        raw_password = validated_data.pop('password')
+        password = validated_data.pop('password')
 
-        # manually hash the password
-        validated_data['password'] = make_password(raw_password)
 
-        user = User.objects.create(**validated_data)
+         # Use the custom manager to hash the password correctly
+        user = User.objects.create_user(password=password, **validated_data)
         return user
+
+
+
+
+class PostSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    class Meta:
+        model = Post
+        fields = ['id', 'title', 'slug', 'body', 'image', 'status', 'view_count', 'created_at', 'updated_at', 'user']
+        read_only_fields = ['id', 'view_count', 'created_at', 'updated_at']
