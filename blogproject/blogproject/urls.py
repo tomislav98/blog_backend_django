@@ -17,6 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from rest_framework_nested import routers
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework_simplejwt.views import (
@@ -25,7 +26,7 @@ from rest_framework_simplejwt.views import (
 
 )
 from blog.views import MyObtainTokenPairView, RegisterView
-from blog.views import UserViewSet, PostViewSet
+from blog.views import UserViewSet, PostViewSet, CommentViewSet
 router = DefaultRouter()
 
 
@@ -49,15 +50,19 @@ router.register(r'users', UserViewSet)
 # | PUT    | `/api/posts/:id/` | Update a post (you own) |
 # | DELETE | `/api/posts/:id/` | Delete a post (you own) |
 
-router.register(r'api/posts', PostViewSet)
+router.register(r'posts', PostViewSet)
+posts_router = routers.NestedSimpleRouter(router, r'posts', lookup='post')
+posts_router.register(r'comments', CommentViewSet, basename='post-comments')
 
 
 urlpatterns = [
+    path('api/', include(router.urls)),
+     path('api/', include(posts_router.urls)),
     path('admin/', admin.site.urls),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/login/', MyObtainTokenPairView.as_view(), name='token_obtain_pair'),
     path('api/login/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/register/', RegisterView.as_view(), name='auth_register'),
-    path('', include(router.urls)),
-]
+
+] +     static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

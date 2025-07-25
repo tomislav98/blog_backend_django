@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Post
+from .models import User, Post, Comment
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
@@ -86,5 +86,24 @@ class PostSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     class Meta:
         model = Post
-        fields = ['id', 'title', 'slug', 'body', 'image', 'status', 'view_count', 'created_at', 'updated_at', 'user']
+        fields = ['id', 'title', 'slug', 'body','toc', 'image', 'status', 'view_count', 'created_at', 'updated_at', 'user']
         read_only_fields = ['id', 'view_count', 'created_at', 'updated_at']
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)  # Include user info
+    replies = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Comment
+
+        fields = [
+            'id', 'user', 'post', 'parent_comment', 'comment_body',
+            'status', 'created_at', 'replies'
+        ]
+        read_only_fields = ['id', 'user', 'created_at', 'status', 'replies']
+
+
+    def get_replies(self, obj):
+        replies = obj.replies.filter(status='PENDING')
+        return CommentSerializer(replies, many=True).data

@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework import viewsets
-from .models import User, Post
-from .serializers import UserSerializer, MyTokenObtainPairSerializer, PostSerializer
+from .models import User, Post, Comment
+from .serializers import UserSerializer, CommentSerializer, MyTokenObtainPairSerializer, PostSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.permissions import AllowAny
@@ -36,3 +36,15 @@ class PostViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+
+class CommentViewSet(viewsets.ModelViewSet):
+    serializer_class = CommentSerializer
+
+    def get_queryset(self):
+        post_id = self.kwargs['post_pk']  # Or however you get post id from URL
+        return Comment.objects.filter(post_id=post_id, status='PENDING').order_by('created_at')
+
+    def perform_create(self, serializer):
+        post_id = self.kwargs['post_pk']
+        serializer.save(user=self.request.user, post_id=post_id)

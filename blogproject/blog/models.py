@@ -2,6 +2,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.utils import timezone
+from blogproject.utils import extract_toc
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, user_name, password=None, **extra_fields):
@@ -53,11 +54,17 @@ class Post(models.Model):
     title = models.CharField(max_length=255)
     slug = models.SlugField(unique=True, blank=True, null=True)
     body = models.TextField()
+    toc = models.JSONField(default=list, blank=True)
     image = models.ImageField(upload_to='post_images/', null=True, blank=True)
     status = models.CharField(max_length=9, choices=Status.choices, default=Status.DRAFT)
     view_count = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        self.toc = extract_toc(self.body)  # auto-generate TOC from markdown body
+        super().save(*args, **kwargs)
+
 
     def __str__(self):
         return self.title
