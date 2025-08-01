@@ -1,10 +1,9 @@
 from rest_framework import serializers
-from .models import User, Post, Comment
+from .models import User, Comment, Post, PostTag, Tag, Category, PostCategory
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
-from django.contrib.auth.hashers import make_password
-
+from django.utils.text import slugify
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -24,6 +23,13 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         return token
 
 """
+
+🧪 In Simple Terms:
+Action	Purpose
+🡒 Serialization	Converts a Django object (e.g. Comment) → JSON for API response
+🡐 Deserialization	Takes incoming JSON (from a POST/PUT request) → validates and converts
+                    it → saves as a Django model instance
+
 
 Client POSTs data
        ↓
@@ -80,14 +86,58 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
 
 
-
-
 class PostSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
+    comments_count = serializers.SerializerMethodField()
+    tags = serializers.SerializerMethodField()
+    category_names = serializers.SerializerMethodField()
+
+    tag_names = serializers.ListField(
+        child=serializers.CharField(), write_only=True, required=False
+    )
+    category_names_input = serializers.ListField(
+        child=serializers.CharField(), write_only=True, required=False
+    )
+
     class Meta:
         model = Post
-        fields = ['id', 'title', 'slug', 'body','toc', 'image', 'status', 'view_count', 'created_at', 'updated_at', 'user']
-        read_only_fields = ['id', 'view_count', 'created_at', 'updated_at']
+        fields = [
+            'id', 'title', 'body', 'toc', 'image', 'status',
+            'view_count', 'created_at', 'updated_at', 'user',
+            'comments_count', 'tag_names', 'category_names_input',
+            'category_names', 'tags'
+        ]
+        read_only_fields = ['id', 'view_count', 'slug', 'created_at', 'updated_at', 'category_names']
+
+    def get_comments_count(self, obj):
+        return obj.comments.filter(status='APPROVED').count()
+
+    def get_tags(self, obj):
+        return TagSerializer(
+            [pt.tag for pt in obj.post_tags.all()],
+            many=True
+        ).data
+
+    def get_category_names(self, obj):
+        return [pc.category.name for pc in obj.post_categories.all()]
+
+    def create(self, validated_data):
+        tag_names = validated_data.pop('tag_names', [])
+        category_names = validated_data.pop('category_names_input', [])
+        post = Post.objects.create(**validated_data)
+
+        for name in tag_names:
+            slug = slugify(name)
+            tag, _ = Tag.objects.get_or_create(name=name, defaults={'slug': slug})
+            PostTag.objects.get_or_create(post=post, tag=tag)
+
+        for name in category_names:
+            category, _ = Category.objects.get_or_create(name=name)
+            PostCategory.objects.get_or_create(post=post, category=category)
+
+        return post
+
+
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -105,5 +155,10 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
     def get_replies(self, obj):
-        replies = obj.replies.filter(status='PENDING')
+        replies = obj.replies.filter(status='APPROVED')
         return CommentSerializer(replies, many=True).data
+
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = ['id', 'name', 'slug']

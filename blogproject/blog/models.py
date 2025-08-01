@@ -3,6 +3,7 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.utils import timezone
 from blogproject.utils import extract_toc
+from django.utils.text import slugify
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, user_name, password=None, **extra_fields):
@@ -52,7 +53,7 @@ class Post(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='posts')  # many-to-one relation
     title = models.CharField(max_length=255)
-    slug = models.SlugField(unique=True, blank=True, null=True)
+    slug = models.SlugField(unique=True, max_length=100)
     body = models.TextField()
     toc = models.JSONField(default=list, blank=True)
     image = models.ImageField(upload_to='post_images/', null=True, blank=True)
@@ -62,7 +63,9 @@ class Post(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
-        self.toc = extract_toc(self.body)  # auto-generate TOC from markdown body
+        if not self.slug and self.title:
+            self.slug = slugify(self.title)
+        self.toc = extract_toc(self.body)
         super().save(*args, **kwargs)
 
 
@@ -86,7 +89,7 @@ class Comment(models.Model):
         related_name='replies'
     )
     comment_body = models.TextField()
-    status = models.CharField(max_length=9, choices=Status.choices, default=Status.PENDING)
+    status = models.CharField(max_length=9, choices=Status.choices, default=Status.APPROVED)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
