@@ -4,6 +4,7 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseU
 from django.utils import timezone
 from blogproject.utils import extract_toc
 from django.utils.text import slugify
+from .utility import generate_unique_slug
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, user_name, password=None, **extra_fields):
@@ -30,6 +31,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     user_name = models.CharField(max_length=30,  unique=True)
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.SUBSCRIBER)
+
+    profile_image = models.ImageField(
+        upload_to="profile_images/",
+        null=True,
+        blank=True,
+        default="profile_images/default-avatar.png"  # fallback
+    )
 
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -64,9 +72,10 @@ class Post(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug and self.title:
-            self.slug = slugify(self.title)
+            self.slug = generate_unique_slug(Post, self.title)
         self.toc = extract_toc(self.body)
         super().save(*args, **kwargs)
+
 
 
     def __str__(self):

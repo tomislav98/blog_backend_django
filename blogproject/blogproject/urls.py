@@ -26,7 +26,7 @@ urlpatterns = [
 
     # Custom filtered views — ALL start with /api/
     path('api/posts/by-category/', PostListByCategoryView.as_view(), name='posts-by-category'),
-    path('api/posts/by-tag/', PostListByTagSlugView.as_view(), name='post-list-by-tag-slug'),
+    path('api/posts/by-slug/', PostListByTagSlugView.as_view(), name='post-list-by-slug'),
 
     # API routers
     path('api/', include(router.urls)),

@@ -3,7 +3,7 @@ from .models import User, Comment, Post, PostTag, Tag, Category, PostCategory
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
-from django.utils.text import slugify
+from .utility import generate_unique_slug
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -86,6 +86,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
 
 
+
+
 class PostSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     comments_count = serializers.SerializerMethodField()
@@ -112,6 +114,12 @@ class PostSerializer(serializers.ModelSerializer):
     def get_comments_count(self, obj):
         return obj.comments.filter(status='APPROVED').count()
 
+    def get_slug(self, obj):
+        return SlugSerializer(
+            [pt.tag for pt in obj.post_tags.all()],
+            many=True
+        ).data
+
     def get_tags(self, obj):
         return TagSerializer(
             [pt.tag for pt in obj.post_tags.all()],
@@ -127,7 +135,7 @@ class PostSerializer(serializers.ModelSerializer):
         post = Post.objects.create(**validated_data)
 
         for name in tag_names:
-            slug = slugify(name)
+            slug = generate_unique_slug(Tag, name)
             tag, _ = Tag.objects.get_or_create(name=name, defaults={'slug': slug})
             PostTag.objects.get_or_create(post=post, tag=tag)
 
@@ -161,4 +169,9 @@ class CommentSerializer(serializers.ModelSerializer):
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
-        fields = ['id', 'name', 'slug']
+        fields = ['id', 'name']
+
+class SlugSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = ['id', 'name']
